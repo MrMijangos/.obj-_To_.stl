@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Conversor 3D Concurrente · OBJ → STL</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>Conversor 3D Concurrente</h1>
+    <p class="subtitle">OBJ / PLY / OFF → STL · Vanilla JS + Web Workers</p>
+  </header>
+
+  <main class="layout">
+    <!-- Columna izquierda: entrada y trabajos -->
+    <section class="panel" id="panel-entrada">
+      <h2>1 · Archivos de entrada</h2>
+      <div id="dropzone" class="dropzone">
+        <p>Arrastra aquí tus modelos <strong>.obj / .ply / .off</strong></p>
+        <p class="hint">o haz clic para seleccionar</p>
+        <input type="file" id="file-input" accept=".obj,.ply,.off" multiple hidden />
+      </div>
+      <ul id="lista-trabajos" class="lista-trabajos"></ul>
+    </section>
+
+    <!-- Columna central: visualizador -->
+    <section class="panel" id="panel-visor">
+      <h2>2 · Vista previa</h2>
+      <canvas id="visor" width="480" height="360"></canvas>
+      <p class="hint">Canvas 2D · arrastra para rotar (próximamente)</p>
+    </section>
+
+    <!-- Columna derecha: monitor de concurrencia -->
+    <section class="panel" id="panel-monitor">
+      <h2>3 · Monitor de hilos</h2>
+      <div id="pool-workers" class="pool-workers"></div>
+      <div class="fps-box">
+        <span>UI:</span> <strong id="fps">-- FPS</strong>
+      </div>
+      <pre id="log" class="log" aria-live="polite"></pre>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <span>Programación Concurrente · UP Chiapas</span>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

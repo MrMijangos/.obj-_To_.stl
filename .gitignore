@@ -1,0 +1,12 @@
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+# Archivos de prueba pesados (modelos que no queremos versionar)
+*.stl
+!ejemplos/*.stl

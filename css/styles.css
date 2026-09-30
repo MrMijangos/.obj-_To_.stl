@@ -1,0 +1,116 @@
+/* ===== Conversor 3D Concurrente · estilos base =====
+   Tema oscuro, Vanilla CSS (sin frameworks). */
+
+:root {
+  --bg: #0f1117;
+  --panel: #1a1d27;
+  --panel-2: #232734;
+  --borde: #2e3342;
+  --texto: #e6e8ee;
+  --texto-tenue: #9aa0b0;
+  --acento: #5b8cff;
+  --ok: #3ddc84;
+  --warn: #ffb454;
+  --err: #ff5c6c;
+  --fuente: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--fuente);
+  background: var(--bg);
+  color: var(--texto);
+  line-height: 1.5;
+}
+
+.app-header {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid var(--borde);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+}
+.app-header h1 { margin: 0; font-size: 1.4rem; }
+.subtitle { margin: .2rem 0 0; color: var(--texto-tenue); font-size: .9rem; }
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 1rem;
+}
+.panel h2 {
+  margin: 0 0 .8rem;
+  font-size: 1rem;
+  color: var(--acento);
+}
+
+.dropzone {
+  border: 2px dashed var(--borde);
+  border-radius: 10px;
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.dropzone:hover, .dropzone.activo {
+  border-color: var(--acento);
+  background: var(--panel-2);
+}
+.hint { color: var(--texto-tenue); font-size: .8rem; }
+
+.lista-trabajos { list-style: none; padding: 0; margin: 1rem 0 0; }
+
+#visor {
+  width: 100%;
+  height: auto;
+  background: #0a0c12;
+  border-radius: 10px;
+  border: 1px solid var(--borde);
+  display: block;
+}
+
+.pool-workers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-bottom: .8rem;
+}
+.fps-box {
+  font-size: .9rem;
+  color: var(--texto-tenue);
+  margin-bottom: .8rem;
+}
+.fps-box strong { color: var(--ok); }
+
+.log {
+  background: #0a0c12;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: .6rem;
+  font-size: .75rem;
+  height: 180px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  color: var(--texto-tenue);
+  margin: 0;
+}
+
+.app-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--borde);
+  color: var(--texto-tenue);
+  font-size: .8rem;
+  text-align: center;
+}
