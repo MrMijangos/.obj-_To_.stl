@@ -35,9 +35,16 @@ self.onmessage = function (e) {
     const nVerts = malla.positions.length / 3;
     const nTris = malla.indices.length / 3;
 
-    // El STL se TRANSFIERE (Transferable Object): no se copia, se mueve el
-    // ArrayBuffer al hilo principal → menor latencia con mallas grandes.
-    self.postMessage({ tipo: 'resultado', id, stl, nVerts, nTris }, [stl]);
+    // Malla reducida para la vista previa 2D (el DOM/canvas solo existe en el
+    // hilo principal; el worker solo prepara los datos).
+    const preview = self.Geometria.mallaPreviewSoup(malla, 20000);
+
+    // El STL y la preview se TRANSFIEREN (Transferable Objects): no se copian,
+    // se mueven los ArrayBuffer al hilo principal → menor latencia.
+    self.postMessage(
+      { tipo: 'resultado', id, stl, nVerts, nTris, preview: preview.buffer },
+      [stl, preview.buffer]
+    );
   } catch (err) {
     self.postMessage({ tipo: 'error', id, mensaje: err.message });
   }

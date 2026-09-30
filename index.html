@@ -38,7 +38,11 @@
     <section class="panel" id="panel-visor">
       <h2>2 · Vista previa</h2>
       <canvas id="visor" width="480" height="360"></canvas>
-      <p class="hint">Canvas 2D · arrastra para rotar (próximamente)</p>
+      <div class="visor-controles">
+        <button id="btn-solido" class="btn-mini activo">Sólido</button>
+        <button id="btn-wire" class="btn-mini">Wireframe</button>
+        <span class="hint">arrastra sobre el modelo para rotar</span>
+      </div>
     </section>
 
     <!-- Columna derecha: monitor de concurrencia -->
@@ -61,6 +65,7 @@
   </footer>
 
   <script src="js/geometry.js"></script>
+  <script src="js/viewer.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

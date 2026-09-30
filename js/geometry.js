@@ -396,11 +396,30 @@ function generarEsfera(segmentos = 900) {
   return crearMalla(verts, idx, `esfera_${segmentos}`);
 }
 
+/**
+ * Genera una "sopa de triángulos" reducida para la vista previa en Canvas 2D.
+ * Devuelve un Float32Array con 9 floats por triángulo (3 vértices x,y,z),
+ * submuestreando si la malla supera `maxTri` para no ahogar el dibujado 2D.
+ */
+function mallaPreviewSoup(malla, maxTri = 20000) {
+  const { positions, indices } = malla;
+  const nTri = indices.length / 3;
+  const paso = Math.max(1, Math.floor(nTri / maxTri));
+  const salida = [];
+  for (let t = 0; t < nTri; t += paso) {
+    for (let v = 0; v < 3; v++) {
+      const p = indices[t * 3 + v] * 3;
+      salida.push(positions[p], positions[p + 1], positions[p + 2]);
+    }
+  }
+  return new Float32Array(salida);
+}
+
 // Exponer para el Web Worker (importScripts) y para pruebas en Node/navegador.
 if (typeof self !== 'undefined') {
   self.Geometria = {
     parsearModelo, esFormatoBinario,
     exportSTLbinario, exportSTLascii,
-    generarEsfera,
+    generarEsfera, mallaPreviewSoup,
   };
 }

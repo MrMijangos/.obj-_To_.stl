@@ -94,6 +94,15 @@ function agregarDescarga(li, blob, nombreArchivo) {
   li.appendChild(b);
 }
 
+/** Agrega un botón para ver el modelo en el visor 3D. */
+function agregarVer(li, preview) {
+  const b = document.createElement('button');
+  b.className = 'btn-ver';
+  b.textContent = 'Ver 3D';
+  b.addEventListener('click', () => Visor.setModelo(preview));
+  li.appendChild(b);
+}
+
 /* ---------------------------------------------------------------------------
  * Encolado y despacho de trabajos
  * ------------------------------------------------------------------------- */
@@ -147,6 +156,9 @@ async function convertirSinWorker(job) {
     job.refs.meta.textContent =
       `${nTris.toLocaleString('es-MX')} triángulos · ${formatoTamano(blob.size)} · ${ms.toFixed(0)} ms (main thread, bloqueó)`;
     agregarDescarga(job.refs.li, blob, job.nombre + '.stl');
+    const preview = Geometria.mallaPreviewSoup(malla, 20000);
+    agregarVer(job.refs.li, preview);
+    Visor.setModelo(preview);
     log(`✔ (sin worker) "${job.nombre}": ${nTris} triángulos en ${ms.toFixed(0)} ms — la UI estuvo congelada.`);
   } catch (err) {
     job.refs.meta.textContent = 'Error: ' + err.message;
@@ -228,6 +240,9 @@ function manejarMensaje(job, msg) {
         `${msg.nTris.toLocaleString('es-MX')} triángulos · ${formatoTamano(blob.size)}`;
       job.refs.boton.remove(); // quitar Cancelar
       agregarDescarga(job.refs.li, blob, job.nombre + '.stl');
+      const preview = new Float32Array(msg.preview);
+      agregarVer(job.refs.li, preview);
+      Visor.setModelo(preview); // auto-previsualizar el más reciente
       log(`✔ "${job.nombre}": ${msg.nVerts} vértices, ${msg.nTris} triángulos.`);
       terminarJob(job.id);
       lanzarSiguientes();
@@ -348,6 +363,23 @@ function init() {
   log(`App lista. Pool de hasta ${MAX} workers (hardwareConcurrency).`);
   actualizarMonitor();
   requestAnimationFrame(loopIndicadores); // arrancar FPS + latido
+  Visor.init();
+
+  // Botones de modo del visor.
+  const btnSolido = document.getElementById('btn-solido');
+  const btnWire = document.getElementById('btn-wire');
+  if (btnSolido && btnWire) {
+    btnSolido.addEventListener('click', () => {
+      Visor.setModo('solido');
+      btnSolido.classList.add('activo');
+      btnWire.classList.remove('activo');
+    });
+    btnWire.addEventListener('click', () => {
+      Visor.setModo('wireframe');
+      btnWire.classList.add('activo');
+      btnSolido.classList.remove('activo');
+    });
+  }
 
   const dropzone = document.getElementById('dropzone');
   const input = document.getElementById('file-input');
