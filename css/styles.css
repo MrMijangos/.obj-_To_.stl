@@ -95,6 +95,84 @@ body {
 }
 .btn-descargar:hover { filter: brightness(1.1); }
 
+.btn-secundario {
+  margin-top: .8rem;
+  width: 100%;
+  background: var(--panel-2);
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: .55rem;
+  font-size: .85rem;
+  cursor: pointer;
+}
+.btn-secundario:hover { border-color: var(--acento); }
+
+.control-prueba {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .4rem;
+  font-size: .8rem;
+  color: var(--texto-tenue);
+}
+.control-prueba input {
+  width: 80px;
+  background: #0a0c12;
+  border: 1px solid var(--borde);
+  color: var(--texto);
+  border-radius: 6px;
+  padding: .3rem .4rem;
+}
+.control-prueba #seg-info { flex-basis: 100%; }
+
+/* Barra de progreso por trabajo */
+.barra-progreso {
+  height: 8px;
+  background: #0a0c12;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.barra-relleno {
+  height: 100%;
+  width: 0%;
+  background: var(--acento);
+  transition: width .12s linear;
+}
+
+.btn-cancelar {
+  align-self: flex-start;
+  margin-top: .2rem;
+  background: transparent;
+  color: var(--err);
+  border: 1px solid var(--err);
+  border-radius: 6px;
+  padding: .3rem .6rem;
+  font-size: .78rem;
+  cursor: pointer;
+}
+.btn-cancelar:hover { background: rgba(255, 92, 108, .12); }
+
+.trabajo-error { border-color: var(--err); }
+.trabajo-cancelado { opacity: .55; }
+
+/* Chips del monitor de hilos */
+.worker-chip {
+  display: inline-block;
+  background: var(--ok);
+  color: #05210f;
+  font-size: .72rem;
+  font-weight: 600;
+  padding: .2rem .5rem;
+  border-radius: 999px;
+}
+.worker-chip.inactivo {
+  background: var(--panel-2);
+  color: var(--texto-tenue);
+  font-weight: 400;
+}
+
 #visor {
   width: 100%;
   height: auto;

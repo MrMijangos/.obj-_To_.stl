@@ -48,7 +48,7 @@ ConversorOBJ-STL/
 
 - [x] 1. Estructura del proyecto
 - [x] 2. Motor de conversión OBJ/PLY/OFF/STL/GLB → STL
-- [ ] 3. Web Worker de conversión + comunicación
+- [x] 3. Web Worker de conversión + pool + progreso/cancelación
 - [ ] 4. UI: progreso, cancelación, demo con/sin worker
 - [ ] 5. Visualizador Canvas 2D
 - [ ] 6. Service Worker: caché offline

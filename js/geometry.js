@@ -266,8 +266,12 @@ function crearMalla(vertsArray, idxArray, name) {
  * EXPORTADOR STL
  * ------------------------------------------------------------------------- */
 
-/** STL binario → ArrayBuffer. */
-function exportSTLbinario(malla) {
+/**
+ * STL binario → ArrayBuffer.
+ * @param {object} malla
+ * @param {(fraccion:number)=>void} [onProgress] callback opcional de progreso (0..1)
+ */
+function exportSTLbinario(malla, onProgress) {
   const { positions, indices } = malla;
   const nTri = indices.length / 3;
   const buffer = new ArrayBuffer(84 + nTri * 50);
@@ -276,7 +280,11 @@ function exportSTLbinario(malla) {
   dv.setUint32(80, nTri, true); // conteo de triángulos (header queda en ceros)
   let off = 84;
 
+  // Reportar progreso cada ~5% de los triángulos (o cada 1000, lo que sea mayor).
+  const paso = Math.max(1000, Math.floor(nTri / 20));
+
   for (let t = 0; t < nTri; t++) {
+    if (onProgress && t % paso === 0) onProgress(t / nTri);
     const a = indices[t * 3] * 3;
     const b = indices[t * 3 + 1] * 3;
     const c = indices[t * 3 + 2] * 3;
@@ -293,6 +301,7 @@ function exportSTLbinario(malla) {
     dv.setUint16(off + 48, 0, true); // attribute byte count
     off += 50;
   }
+  if (onProgress) onProgress(1);
   return buffer;
 }
 
@@ -350,10 +359,48 @@ function esFormatoBinario(ext) {
   return ext === 'glb' || ext === 'stl';
 }
 
+/* ---------------------------------------------------------------------------
+ * GENERADOR DE MALLA DE PRUEBA (para provocar una tarea pesada > 1s)
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Esfera UV subdividida. Con `segmentos` alto genera millones de triángulos,
+ * útil para demostrar que la conversión pesada no congela la UI.
+ * Nº de triángulos ≈ segmentos · (segmentos-1) · 2.
+ * @param {number} segmentos  divisiones (p.ej. 900 ≈ 1.6 millones de triángulos)
+ */
+function generarEsfera(segmentos = 900) {
+  const anillos = segmentos;      // latitud
+  const sectores = segmentos;     // longitud
+  const verts = [];
+  const idx = [];
+
+  for (let i = 0; i <= anillos; i++) {
+    const phi = (Math.PI * i) / anillos;          // 0 .. PI
+    const sp = Math.sin(phi), cp = Math.cos(phi);
+    for (let j = 0; j <= sectores; j++) {
+      const theta = (2 * Math.PI * j) / sectores;  // 0 .. 2PI
+      verts.push(sp * Math.cos(theta), cp, sp * Math.sin(theta));
+    }
+  }
+
+  const cols = sectores + 1;
+  for (let i = 0; i < anillos; i++) {
+    for (let j = 0; j < sectores; j++) {
+      const a = i * cols + j;
+      const b = a + cols;
+      idx.push(a, b, a + 1);
+      idx.push(a + 1, b, b + 1);
+    }
+  }
+  return crearMalla(verts, idx, `esfera_${segmentos}`);
+}
+
 // Exponer para el Web Worker (importScripts) y para pruebas en Node/navegador.
 if (typeof self !== 'undefined') {
   self.Geometria = {
     parsearModelo, esFormatoBinario,
     exportSTLbinario, exportSTLascii,
+    generarEsfera,
   };
 }

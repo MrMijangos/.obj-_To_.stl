@@ -19,8 +19,14 @@
       <div id="dropzone" class="dropzone">
         <p>Arrastra aquí tus modelos <strong>.obj / .ply / .off</strong></p>
         <p class="hint">o haz clic para seleccionar</p>
-        <input type="file" id="file-input" accept=".obj,.ply,.off" multiple hidden />
+        <input type="file" id="file-input" accept=".obj,.ply,.off,.stl,.glb" multiple hidden />
       </div>
+      <div class="control-prueba">
+        <label for="seg-input">Resolución de prueba (segmentos):</label>
+        <input type="number" id="seg-input" value="700" min="50" max="4000" step="50" />
+        <span id="seg-info" class="hint"></span>
+      </div>
+      <button id="btn-generar" class="btn-secundario">Generar modelo de prueba (pesado)</button>
       <ul id="lista-trabajos" class="lista-trabajos"></ul>
     </section>
 
