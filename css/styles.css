@@ -191,9 +191,44 @@ body {
 .fps-box {
   font-size: .9rem;
   color: var(--texto-tenue);
+  margin-bottom: .5rem;
+}
+.fps-box strong { color: var(--ok); font-variant-numeric: tabular-nums; }
+.fps-box strong.fps-medio { color: var(--warn); }
+.fps-box strong.fps-malo { color: var(--err); }
+
+.check-linea {
+  display: block;
+  margin-top: .7rem;
+  font-size: .8rem;
+  color: var(--warn);
+  cursor: pointer;
+}
+.check-linea input { vertical-align: middle; margin-right: .3rem; }
+
+.latido-box {
+  font-size: .78rem;
+  color: var(--texto-tenue);
   margin-bottom: .8rem;
 }
-.fps-box strong { color: var(--ok); }
+.latido-track {
+  position: relative;
+  height: 12px;
+  margin-top: .35rem;
+  background: #0a0c12;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.latido-bola {
+  position: absolute;
+  top: 1px;
+  left: 0;
+  width: 16px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--acento);
+}
 
 .log {
   background: #0a0c12;

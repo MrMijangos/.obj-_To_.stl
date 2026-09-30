@@ -27,6 +27,10 @@
         <span id="seg-info" class="hint"></span>
       </div>
       <button id="btn-generar" class="btn-secundario">Generar modelo de prueba (pesado)</button>
+      <label class="check-linea">
+        <input type="checkbox" id="modo-sin-worker" />
+        Ejecutar <strong>SIN</strong> worker (congela la UI · solo para comparar)
+      </label>
       <ul id="lista-trabajos" class="lista-trabajos"></ul>
     </section>
 
@@ -43,6 +47,10 @@
       <div id="pool-workers" class="pool-workers"></div>
       <div class="fps-box">
         <span>UI:</span> <strong id="fps">-- FPS</strong>
+      </div>
+      <div class="latido-box">
+        <span>Animación (se detiene si el hilo se bloquea):</span>
+        <div class="latido-track"><div id="latido" class="latido-bola"></div></div>
       </div>
       <pre id="log" class="log" aria-live="polite"></pre>
     </section>

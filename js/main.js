@@ -85,6 +85,15 @@ function crearTarjeta(job) {
   return { li, meta, relleno, boton };
 }
 
+/** Agrega un botón de descarga del STL a una tarjeta ya terminada. */
+function agregarDescarga(li, blob, nombreArchivo) {
+  const b = document.createElement('button');
+  b.className = 'btn-descargar';
+  b.textContent = 'Descargar STL';
+  b.addEventListener('click', () => descargar(blob, nombreArchivo));
+  li.appendChild(b);
+}
+
 /* ---------------------------------------------------------------------------
  * Encolado y despacho de trabajos
  * ------------------------------------------------------------------------- */
@@ -92,9 +101,58 @@ function crearTarjeta(job) {
 /** Encola un trabajo (de archivo o generado) y trata de lanzarlo. */
 function encolar(job) {
   job.refs = crearTarjeta(job);
+
+  // Modo comparativo: ejecutar en el hilo principal (bloquea la UI a propósito).
+  const sinWorker = document.getElementById('modo-sin-worker');
+  if (sinWorker && sinWorker.checked) {
+    convertirSinWorker(job);
+    return;
+  }
+
   cola.push(job);
   log(`Encolado "${job.nombre}" (${cola.length} en cola, ${activos.size}/${MAX} activos).`);
   lanzarSiguientes();
+}
+
+/**
+ * Convierte en el HILO PRINCIPAL (sin worker). Sirve para DEMOSTRAR el problema:
+ * durante el cálculo la UI se congela (FPS cae a 0, la animación se detiene).
+ * NO usar en producción; es solo para comparar contra el modo con worker.
+ */
+async function convertirSinWorker(job) {
+  job.refs.boton.remove(); // no se puede cancelar: el hilo estará bloqueado
+  job.refs.meta.textContent = 'Procesando SIN worker (la UI se congelará)…';
+  log(`⚠ "${job.nombre}" corriendo en el HILO PRINCIPAL (bloqueará la UI).`);
+
+  let data = null;
+  if (job.origen !== 'generar') {
+    const binario = Geometria.esFormatoBinario(job.ext);
+    data = await leerArchivo(job.file, binario);
+  }
+
+  // Dar un frame para pintar el estado antes de bloquear el hilo.
+  await new Promise((r) => setTimeout(r, 60));
+
+  try {
+    const t0 = performance.now();
+    const malla = job.origen === 'generar'
+      ? Geometria.generarEsfera(job.segmentos)
+      : Geometria.parsearModelo(job.ext, data, job.nombre);
+    const stl = Geometria.exportSTLbinario(malla); // sin progreso: el hilo está ocupado
+    const ms = performance.now() - t0;
+
+    const blob = new Blob([stl], { type: 'model/stl' });
+    const nTris = malla.indices.length / 3;
+    job.refs.relleno.style.width = '100%';
+    job.refs.meta.textContent =
+      `${nTris.toLocaleString('es-MX')} triángulos · ${formatoTamano(blob.size)} · ${ms.toFixed(0)} ms (main thread, bloqueó)`;
+    agregarDescarga(job.refs.li, blob, job.nombre + '.stl');
+    log(`✔ (sin worker) "${job.nombre}": ${nTris} triángulos en ${ms.toFixed(0)} ms — la UI estuvo congelada.`);
+  } catch (err) {
+    job.refs.meta.textContent = 'Error: ' + err.message;
+    job.refs.li.classList.add('trabajo-error');
+    log(`✖ Error en "${job.nombre}": ${err.message}`);
+  }
 }
 
 /** Lanza trabajos mientras haya workers libres y cosas en la cola. */
@@ -168,13 +226,8 @@ function manejarMensaje(job, msg) {
       job.refs.relleno.style.width = '100%';
       job.refs.meta.textContent =
         `${msg.nTris.toLocaleString('es-MX')} triángulos · ${formatoTamano(blob.size)}`;
-      // Reemplazar el botón Cancelar por Descargar.
-      job.refs.boton.textContent = 'Descargar STL';
-      job.refs.boton.className = 'btn-descargar';
-      const nombreArchivo = job.nombre + '.stl';
-      job.refs.boton.replaceWith(job.refs.boton.cloneNode(true)); // limpiar listeners
-      const nuevoBoton = job.refs.li.querySelector('.btn-descargar');
-      nuevoBoton.addEventListener('click', () => descargar(blob, nombreArchivo));
+      job.refs.boton.remove(); // quitar Cancelar
+      agregarDescarga(job.refs.li, blob, job.nombre + '.stl');
       log(`✔ "${job.nombre}": ${msg.nVerts} vértices, ${msg.nTris} triángulos.`);
       terminarJob(job.id);
       lanzarSiguientes();
@@ -234,6 +287,36 @@ function actualizarMonitor() {
 }
 
 /* ---------------------------------------------------------------------------
+ * Indicadores de fluidez de la UI (FPS + animación "latido")
+ * Ambos dependen de requestAnimationFrame: si el hilo principal se bloquea,
+ * dejan de actualizarse — evidencia visual de un congelamiento.
+ * ------------------------------------------------------------------------- */
+
+let framesFPS = 0;
+let ultimoFPS = performance.now();
+
+function loopIndicadores(now) {
+  // --- FPS: contar frames y refrescar cada 500 ms ---
+  framesFPS++;
+  if (now - ultimoFPS >= 500) {
+    const fps = Math.round((framesFPS * 1000) / (now - ultimoFPS));
+    const el = document.getElementById('fps');
+    el.textContent = fps + ' FPS';
+    el.className = fps >= 50 ? '' : fps >= 20 ? 'fps-medio' : 'fps-malo';
+    framesFPS = 0;
+    ultimoFPS = now;
+  }
+
+  // --- Latido: pelota que va y viene (usa "left", propiedad de layout) ---
+  const t = (now / 1000) % 2;        // ciclo de 2 s
+  const p = t < 1 ? t : 2 - t;       // ping-pong 0→1→0
+  const latido = document.getElementById('latido');
+  if (latido) latido.style.left = (p * 90) + '%';
+
+  requestAnimationFrame(loopIndicadores);
+}
+
+/* ---------------------------------------------------------------------------
  * Entradas de usuario
  * ------------------------------------------------------------------------- */
 
@@ -264,6 +347,7 @@ function actualizarInfoResolucion() {
 function init() {
   log(`App lista. Pool de hasta ${MAX} workers (hardwareConcurrency).`);
   actualizarMonitor();
+  requestAnimationFrame(loopIndicadores); // arrancar FPS + latido
 
   const dropzone = document.getElementById('dropzone');
   const input = document.getElementById('file-input');
