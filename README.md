@@ -3,7 +3,7 @@
 Aplicación web **client-side** hecha con **Vanilla JavaScript** (sin librerías ni
 frameworks) para la asignatura **Programación Concurrente** — UP Chiapas.
 
-Convierte modelos 3D (`.obj`, `.ply`, `.off`) a formato **STL** ejecutando el
+Convierte modelos 3D (`.obj`, `.ply`, `.off`, `.stl`, `.glb`) a formato **STL** ejecutando el
 algoritmo pesado en **Dedicated Web Workers**, de modo que la interfaz nunca se
 congela, y usa un **Service Worker** para funcionar sin conexión.
 
@@ -47,7 +47,7 @@ ConversorOBJ-STL/
 ## Estado / roadmap
 
 - [x] 1. Estructura del proyecto
-- [ ] 2. Parser OBJ + exportador STL
+- [x] 2. Motor de conversión OBJ/PLY/OFF/STL/GLB → STL
 - [ ] 3. Web Worker de conversión + comunicación
 - [ ] 4. UI: progreso, cancelación, demo con/sin worker
 - [ ] 5. Visualizador Canvas 2D

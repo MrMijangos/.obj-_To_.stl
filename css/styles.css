@@ -71,6 +71,29 @@ body {
 .hint { color: var(--texto-tenue); font-size: .8rem; }
 
 .lista-trabajos { list-style: none; padding: 0; margin: 1rem 0 0; }
+.trabajo {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  background: var(--panel-2);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: .6rem .7rem;
+  margin-bottom: .5rem;
+}
+.trabajo .meta { color: var(--texto-tenue); font-size: .78rem; }
+.btn-descargar {
+  align-self: flex-start;
+  margin-top: .2rem;
+  background: var(--acento);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: .35rem .7rem;
+  font-size: .8rem;
+  cursor: pointer;
+}
+.btn-descargar:hover { filter: brightness(1.1); }
 
 #visor {
   width: 100%;
