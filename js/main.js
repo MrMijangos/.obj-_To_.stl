@@ -107,9 +107,29 @@ function agregarVer(li, preview) {
  * Encolado y despacho de trabajos
  * ------------------------------------------------------------------------- */
 
-/** Encola un trabajo (de archivo o generado) y trata de lanzarlo. */
-function encolar(job) {
+/** (Re)crea el botón Cancelar de una tarjeta y lo registra como refs.boton. */
+function ponerCancelar(job) {
+  const b = document.createElement('button');
+  b.className = 'btn-cancelar';
+  b.textContent = 'Cancelar';
+  b.addEventListener('click', () => cancelarJob(job));
+  job.refs.li.appendChild(b);
+  job.refs.boton = b;
+}
+
+/** Despacha un trabajo de SOLO VISTA PREVIA (para archivos subidos). */
+function encolarPreview(job) {
+  job.fase = 'preview';
   job.refs = crearTarjeta(job);
+  cola.push(job);
+  log(`Vista previa en cola: "${job.nombre}".`);
+  lanzarSiguientes();
+}
+
+/** Despacha un trabajo de CONVERSIÓN a STL (crea tarjeta si no existe). */
+function encolarConversion(job) {
+  job.fase = 'convertir';
+  if (!job.refs) job.refs = crearTarjeta(job);
 
   // Modo comparativo: ejecutar en el hilo principal (bloquea la UI a propósito).
   const sinWorker = document.getElementById('modo-sin-worker');
@@ -119,8 +139,15 @@ function encolar(job) {
   }
 
   cola.push(job);
-  log(`Encolado "${job.nombre}" (${cola.length} en cola, ${activos.size}/${MAX} activos).`);
+  log(`Conversión en cola: "${job.nombre}" (${cola.length} en cola, ${activos.size}/${MAX} activos).`);
   lanzarSiguientes();
+}
+
+/** Convierte a STL un modelo que ya está en vista previa. */
+function convertirDesdePreview(job) {
+  job.refs.relleno.style.width = '0%';
+  job.refs.meta.textContent = 'En cola…';
+  encolarConversion(job);
 }
 
 /**
@@ -129,7 +156,7 @@ function encolar(job) {
  * NO usar en producción; es solo para comparar contra el modo con worker.
  */
 async function convertirSinWorker(job) {
-  job.refs.boton.remove(); // no se puede cancelar: el hilo estará bloqueado
+  if (job.refs.boton) job.refs.boton.remove(); // no se puede cancelar: el hilo se bloqueará
   job.refs.meta.textContent = 'Procesando SIN worker (la UI se congelará)…';
   log(`⚠ "${job.nombre}" corriendo en el HILO PRINCIPAL (bloqueará la UI).`);
 
@@ -157,7 +184,7 @@ async function convertirSinWorker(job) {
       `${nTris.toLocaleString('es-MX')} triángulos · ${formatoTamano(blob.size)} · ${ms.toFixed(0)} ms (main thread, bloqueó)`;
     agregarDescarga(job.refs.li, blob, job.nombre + '.stl');
     const preview = Geometria.mallaPreviewSoup(malla, 20000);
-    agregarVer(job.refs.li, preview);
+    if (!job.refs.li.querySelector('.btn-ver')) agregarVer(job.refs.li, preview);
     Visor.setModelo(preview);
     log(`✔ (sin worker) "${job.nombre}": ${nTris} triángulos en ${ms.toFixed(0)} ms — la UI estuvo congelada.`);
   } catch (err) {
@@ -182,7 +209,7 @@ async function iniciarJob(job) {
   activos.set(job.id, entry);
   actualizarMonitor();
 
-  job.refs.meta.textContent = 'Iniciando…';
+  job.refs.meta.textContent = job.fase === 'preview' ? 'Analizando…' : 'Iniciando…';
 
   const worker = new Worker('js/worker-conversion.js');
   entry.worker = worker;
@@ -196,6 +223,7 @@ async function iniciarJob(job) {
   };
 
   const mensaje = { tipo: 'convertir', id: job.id, nombre: job.nombre };
+  mensaje.soloPreview = job.fase === 'preview';
   let transfer = [];
 
   if (job.origen === 'generar') {
@@ -224,7 +252,7 @@ function manejarMensaje(job, msg) {
 
   switch (msg.tipo) {
     case 'inicio':
-      job.refs.meta.textContent = 'Procesando…';
+      job.refs.meta.textContent = job.fase === 'preview' ? 'Analizando modelo…' : 'Convirtiendo…';
       break;
 
     case 'progreso':
@@ -233,15 +261,35 @@ function manejarMensaje(job, msg) {
       actualizarMonitor();
       break;
 
+    case 'preview': {
+      const preview = new Float32Array(msg.preview);
+      job.refs.relleno.style.width = '100%';
+      job.refs.meta.textContent =
+        `Vista previa · ${msg.nTris.toLocaleString('es-MX')} triángulos (sin convertir aún)`;
+      if (job.refs.boton) job.refs.boton.remove(); // quitar Cancelar
+      // Botón para convertir a STL solo si el usuario lo decide.
+      const bconv = document.createElement('button');
+      bconv.className = 'btn-descargar';
+      bconv.textContent = 'Convertir a STL';
+      bconv.addEventListener('click', () => { bconv.remove(); convertirDesdePreview(job); });
+      job.refs.li.appendChild(bconv);
+      agregarVer(job.refs.li, preview);
+      Visor.setModelo(preview);
+      log(`👁 Vista previa "${job.nombre}": ${msg.nTris} triángulos. Pulsa "Convertir a STL" para exportar.`);
+      terminarJob(job.id);
+      lanzarSiguientes();
+      break;
+    }
+
     case 'resultado': {
       const blob = new Blob([msg.stl], { type: 'model/stl' });
       job.refs.relleno.style.width = '100%';
       job.refs.meta.textContent =
         `${msg.nTris.toLocaleString('es-MX')} triángulos · ${formatoTamano(blob.size)}`;
-      job.refs.boton.remove(); // quitar Cancelar
+      if (job.refs.boton) job.refs.boton.remove(); // quitar Cancelar
       agregarDescarga(job.refs.li, blob, job.nombre + '.stl');
       const preview = new Float32Array(msg.preview);
-      agregarVer(job.refs.li, preview);
+      if (!job.refs.li.querySelector('.btn-ver')) agregarVer(job.refs.li, preview);
       Visor.setModelo(preview); // auto-previsualizar el más reciente
       log(`✔ "${job.nombre}": ${msg.nVerts} vértices, ${msg.nTris} triángulos.`);
       terminarJob(job.id);
@@ -252,7 +300,7 @@ function manejarMensaje(job, msg) {
     case 'error':
       job.refs.meta.textContent = 'Error: ' + msg.mensaje;
       job.refs.li.classList.add('trabajo-error');
-      job.refs.boton.remove();
+      if (job.refs.boton) job.refs.boton.remove();
       log(`✖ Error en "${job.nombre}": ${msg.mensaje}`);
       terminarJob(job.id);
       lanzarSiguientes();
@@ -339,7 +387,8 @@ function procesarArchivos(files) {
   for (const file of files) {
     const ext = file.name.split('.').pop().toLowerCase();
     const nombre = file.name.replace(/\.[^.]+$/, '');
-    encolar({ id: ++seqId, origen: 'archivo', file, ext, nombre });
+    // Los archivos subidos primero se PREVISUALIZAN; se convierten a demanda.
+    encolarPreview({ id: ++seqId, origen: 'archivo', file, ext, nombre });
   }
 }
 
@@ -347,7 +396,8 @@ function generarModeloPrueba() {
   const input = document.getElementById('seg-input');
   let segmentos = parseInt(input.value, 10) || 700;
   segmentos = Math.max(50, Math.min(4000, segmentos)); // acotar
-  encolar({ id: ++seqId, origen: 'generar', segmentos, nombre: `prueba_esfera_${segmentos}` });
+  // El modelo de prueba (carga) sí se convierte directamente.
+  encolarConversion({ id: ++seqId, origen: 'generar', segmentos, nombre: `prueba_esfera_${segmentos}` });
 }
 
 /** Muestra cuántos triángulos/tamaño aprox. generará la resolución elegida. */
@@ -380,6 +430,14 @@ function init() {
       btnSolido.classList.remove('activo');
     });
   }
+
+  // Botones de zoom / reset del visor.
+  const bZin = document.getElementById('btn-zoom-in');
+  const bZout = document.getElementById('btn-zoom-out');
+  const bReset = document.getElementById('btn-reset');
+  if (bZin) bZin.addEventListener('click', () => Visor.zoomBy(1.25));
+  if (bZout) bZout.addEventListener('click', () => Visor.zoomBy(1 / 1.25));
+  if (bReset) bReset.addEventListener('click', () => Visor.resetVista());
 
   const dropzone = document.getElementById('dropzone');
   const input = document.getElementById('file-input');

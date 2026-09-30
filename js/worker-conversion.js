@@ -15,22 +15,16 @@ self.onmessage = function (e) {
   const msg = e.data;
   if (msg.tipo !== 'convertir') return;
 
-  const { id, ext, nombre, data, segmentos } = msg;
+  const { id, ext, nombre, data, segmentos, soloPreview } = msg;
 
   try {
     self.postMessage({ tipo: 'inicio', id });
 
-    // Fase 1: obtener la malla (0 → 40%).
+    // Fase 1: obtener la malla.
     // 'esfera' = malla de prueba generada aquí mismo; el resto = archivo real.
     const malla = ext === 'esfera'
       ? self.Geometria.generarEsfera(segmentos)
       : self.Geometria.parsearModelo(ext, data, nombre);
-    self.postMessage({ tipo: 'progreso', id, pct: 40 });
-
-    // Fase 2: exportación a STL binario (40 → 100%).
-    const stl = self.Geometria.exportSTLbinario(malla, (f) => {
-      self.postMessage({ tipo: 'progreso', id, pct: 40 + Math.round(f * 60) });
-    });
 
     const nVerts = malla.positions.length / 3;
     const nTris = malla.indices.length / 3;
@@ -38,6 +32,21 @@ self.onmessage = function (e) {
     // Malla reducida para la vista previa 2D (el DOM/canvas solo existe en el
     // hilo principal; el worker solo prepara los datos).
     const preview = self.Geometria.mallaPreviewSoup(malla, 20000);
+
+    // Modo "solo previsualizar": no exportamos STL, solo devolvemos la preview.
+    if (soloPreview) {
+      self.postMessage(
+        { tipo: 'preview', id, nVerts, nTris, preview: preview.buffer },
+        [preview.buffer]
+      );
+      return;
+    }
+
+    // Fase 2: exportación a STL binario (40 → 100%).
+    self.postMessage({ tipo: 'progreso', id, pct: 40 });
+    const stl = self.Geometria.exportSTLbinario(malla, (f) => {
+      self.postMessage({ tipo: 'progreso', id, pct: 40 + Math.round(f * 60) });
+    });
 
     // El STL y la preview se TRANSFIEREN (Transferable Objects): no se copian,
     // se mueven los ArrayBuffer al hilo principal → menor latencia.

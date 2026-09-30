@@ -12,6 +12,7 @@ const Visor = (function () {
   let centro = [0, 0, 0];
   let escala = 1;
   let rotX = 0.5, rotY = 0.6;
+  let zoom = 1.4;       // factor de acercamiento (1 = encaje base)
   let modo = 'solido';  // 'solido' | 'wireframe'
   let arrastrando = false, lastX = 0, lastY = 0;
   let pendiente = false;
@@ -32,6 +33,12 @@ const Visor = (function () {
       lastX = e.clientX; lastY = e.clientY;
       solicitarRender();
     });
+
+    // Zoom con la rueda del mouse.
+    cvs.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      zoomBy(e.deltaY < 0 ? 1.1 : 1 / 1.1);
+    }, { passive: false });
 
     dibujarMensaje('Convierte o genera un modelo para verlo aquí');
   }
@@ -57,6 +64,17 @@ const Visor = (function () {
   }
 
   function setModo(m) { modo = m; solicitarRender(); }
+
+  /** Multiplica el zoom por un factor (acotado). */
+  function zoomBy(factor) {
+    zoom = Math.max(0.3, Math.min(15, zoom * factor));
+    solicitarRender();
+  }
+
+  function resetVista() {
+    rotX = 0.5; rotY = 0.6; zoom = 1.4;
+    solicitarRender();
+  }
 
   function solicitarRender() {
     if (pendiente) return;
@@ -88,7 +106,7 @@ const Visor = (function () {
     ctx.fillRect(0, 0, W, H);
     if (!tris) return;
 
-    const s = Math.min(W, H) * 0.42;
+    const s = Math.min(W, H) * 0.42 * zoom;
     const ox = W / 2, oy = H / 2;
 
     // Proyectar todos los vértices y calcular profundidad media por triángulo.
@@ -176,5 +194,5 @@ const Visor = (function () {
     ctx.textAlign = 'start';
   }
 
-  return { init, setModelo, setModo };
+  return { init, setModelo, setModo, zoomBy, resetVista };
 })();
