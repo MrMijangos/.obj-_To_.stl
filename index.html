@@ -63,12 +63,21 @@
     </section>
   </main>
 
+  <section class="panel panel-historial" id="panel-historial">
+    <div class="historial-cab">
+      <h2>Historial de conversiones <span class="hint">(guardado en tu navegador · IndexedDB)</span></h2>
+      <button id="btn-vaciar" class="btn-mini">Vaciar historial</button>
+    </div>
+    <ul id="lista-historial" class="lista-historial"></ul>
+  </section>
+
   <footer class="app-footer">
     <span>Programación Concurrente · UP Chiapas</span>
   </footer>
 
   <script src="js/geometry.js"></script>
   <script src="js/viewer.js"></script>
+  <script src="js/db.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

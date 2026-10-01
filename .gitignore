@@ -10,3 +10,10 @@ Thumbs.db
 # Archivos de prueba pesados (modelos que no queremos versionar)
 *.stl
 !ejemplos/*.stl
+
+# Guía de estudio personal (no forma parte de la entrega)
+GUIA.md
+
+# Archivos temporales del editor Kate
+*.kate-swp
+.*.kate-swp

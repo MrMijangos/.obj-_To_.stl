@@ -186,6 +186,7 @@ async function convertirSinWorker(job) {
     const preview = Geometria.mallaPreviewSoup(malla, 20000);
     if (!job.refs.li.querySelector('.btn-ver')) agregarVer(job.refs.li, preview);
     Visor.setModelo(preview);
+    guardarEnHistorial(job.nombre + '.stl', nTris, blob);
     log(`✔ (sin worker) "${job.nombre}": ${nTris} triángulos en ${ms.toFixed(0)} ms — la UI estuvo congelada.`);
   } catch (err) {
     job.refs.meta.textContent = 'Error: ' + err.message;
@@ -291,6 +292,7 @@ function manejarMensaje(job, msg) {
       const preview = new Float32Array(msg.preview);
       if (!job.refs.li.querySelector('.btn-ver')) agregarVer(job.refs.li, preview);
       Visor.setModelo(preview); // auto-previsualizar el más reciente
+      guardarEnHistorial(job.nombre + '.stl', msg.nTris, blob);
       log(`✔ "${job.nombre}": ${msg.nVerts} vértices, ${msg.nTris} triángulos.`);
       terminarJob(job.id);
       lanzarSiguientes();
@@ -380,6 +382,96 @@ function loopIndicadores(now) {
 }
 
 /* ---------------------------------------------------------------------------
+ * Historial persistente (IndexedDB) y Service Worker
+ * ------------------------------------------------------------------------- */
+
+const LIMITE_HISTORIAL = 50 * 1048576; // 50 MB: no guardar STL enormes en IndexedDB
+
+/** Guarda un STL convertido en IndexedDB y lo agrega al historial visible. */
+function guardarEnHistorial(nombre, nTris, blob) {
+  if (blob.size > LIMITE_HISTORIAL) {
+    log(`ℹ Historial: "${nombre}" no se guardó (supera ${formatoTamano(LIMITE_HISTORIAL)}).`);
+    return;
+  }
+  const reg = { nombre, nTris, size: blob.size, fecha: Date.now(), blob };
+  BaseDatos.guardar(reg)
+    .then((id) => { reg.id = id; agregarHistorialItem(reg); })
+    .catch((err) => log(`✖ No se pudo guardar en historial: ${err.message}`));
+}
+
+/** Carga el historial guardado al iniciar la app. */
+function cargarHistorial() {
+  BaseDatos.listar()
+    .then((registros) => {
+      registros.sort((a, b) => a.fecha - b.fecha);
+      registros.forEach(agregarHistorialItem);
+      log(`Historial cargado: ${registros.length} conversión(es) guardada(s).`);
+    })
+    .catch((err) => log(`✖ No se pudo leer el historial: ${err.message}`));
+}
+
+/** Agrega (al inicio) un elemento del historial con Descargar / Ver 3D / Borrar. */
+function agregarHistorialItem(reg) {
+  const li = document.createElement('li');
+  li.className = 'historial-item';
+
+  const info = document.createElement('span');
+  const fecha = new Date(reg.fecha).toLocaleString('es-MX');
+  info.innerHTML = `<strong>${reg.nombre}</strong>` +
+    `<span class="meta">${reg.nTris.toLocaleString('es-MX')} triángulos · ${formatoTamano(reg.size)} · ${fecha}</span>`;
+
+  const bDesc = document.createElement('button');
+  bDesc.className = 'btn-descargar';
+  bDesc.textContent = 'Descargar';
+  bDesc.addEventListener('click', () => descargar(reg.blob, reg.nombre));
+
+  const bVer = document.createElement('button');
+  bVer.className = 'btn-ver';
+  bVer.textContent = 'Ver 3D';
+  bVer.addEventListener('click', () => verDesdeHistorial(reg));
+
+  const bDel = document.createElement('button');
+  bDel.className = 'btn-cancelar';
+  bDel.textContent = 'Borrar';
+  bDel.addEventListener('click', () => {
+    BaseDatos.borrar(reg.id).then(() => { li.remove(); log(`⨯ Borrado del historial: "${reg.nombre}".`); });
+  });
+
+  li.append(info, bDesc, bVer, bDel);
+  document.getElementById('lista-historial').prepend(li);
+}
+
+/** Reconstruye la vista previa de un STL guardado (parseo en un worker). */
+async function verDesdeHistorial(reg) {
+  const buf = await reg.blob.arrayBuffer();
+  const worker = new Worker('js/worker-conversion.js');
+  worker.onmessage = (e) => {
+    if (e.data.tipo === 'preview') {
+      Visor.setModelo(new Float32Array(e.data.preview));
+      worker.terminate();
+    } else if (e.data.tipo === 'error') {
+      log(`✖ No se pudo previsualizar "${reg.nombre}": ${e.data.mensaje}`);
+      worker.terminate();
+    }
+  };
+  worker.postMessage(
+    { tipo: 'convertir', id: -1, ext: 'stl', nombre: reg.nombre, data: buf, soloPreview: true },
+    [buf]
+  );
+}
+
+/** Registra el Service Worker (resiliencia / caché offline). */
+function registrarServiceWorker() {
+  if (!('serviceWorker' in navigator)) {
+    log('ℹ Este navegador no soporta Service Workers.');
+    return;
+  }
+  navigator.serviceWorker.register('sw.js')
+    .then(() => log('✔ Service Worker registrado: la app funciona sin conexión.'))
+    .catch((err) => log(`✖ Error al registrar el Service Worker: ${err.message}`));
+}
+
+/* ---------------------------------------------------------------------------
  * Entradas de usuario
  * ------------------------------------------------------------------------- */
 
@@ -414,6 +506,18 @@ function init() {
   actualizarMonitor();
   requestAnimationFrame(loopIndicadores); // arrancar FPS + latido
   Visor.init();
+  registrarServiceWorker();
+  cargarHistorial();
+
+  const btnVaciar = document.getElementById('btn-vaciar');
+  if (btnVaciar) {
+    btnVaciar.addEventListener('click', () => {
+      BaseDatos.vaciar().then(() => {
+        document.getElementById('lista-historial').innerHTML = '';
+        log('Historial vaciado.');
+      });
+    });
+  }
 
   // Botones de modo del visor.
   const btnSolido = document.getElementById('btn-solido');
